@@ -9,7 +9,7 @@ import {
   where,
   onSnapshot
 } from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { db, auth } from "./firebase";
 import { useNavigate } from "react-router-dom";
 
 function Home() {
