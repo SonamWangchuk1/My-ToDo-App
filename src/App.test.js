@@ -8,12 +8,15 @@ jest.mock('./firebase', () => ({
   auth: {
     onAuthStateChanged: jest.fn(),
   },
+  db: {}, // db can be empty, since we mock firestore functions
 }));
 
-// Mock Firestore
+// Mock Firestore functions used in Home.jsx
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
-  getDocs: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+  onSnapshot: jest.fn(),
 }));
 
 describe('App component', () => {
@@ -48,19 +51,22 @@ describe('App component', () => {
       return jest.fn();
     });
 
-    // Mock Firestore getDocs for Home component
-    firestore.getDocs.mockResolvedValue({
-      docs: [
-        { id: '1', data: () => ({ task: 'Test Todo' }) },
-        { id: '2', data: () => ({ task: 'Another Task' }) },
-      ],
+    // Mock Firestore query for Home component
+    const fakeTodos = [
+      { id: '1', data: () => ({ task: 'Test Todo' }) },
+      { id: '2', data: () => ({ task: 'Another Task' }) },
+    ];
+
+    firestore.onSnapshot.mockImplementation((q, callback) => {
+      callback({ docs: fakeTodos });
+      return jest.fn(); // unsubscribe function
     });
 
     render(<App />);
 
     await waitFor(() => {
-      // Check if a todo item is rendered instead of literal "home"
       expect(screen.getByText(/test todo/i)).toBeInTheDocument();
+      expect(screen.getByText(/another task/i)).toBeInTheDocument();
     });
   });
 });
