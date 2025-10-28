@@ -8,7 +8,7 @@ jest.mock('./firebase', () => ({
   auth: {
     onAuthStateChanged: jest.fn(),
   },
-  db: {}, // db can be empty, since we mock firestore functions
+  db: {},
 }));
 
 // Mock Firestore functions used in Home.jsx
@@ -25,7 +25,8 @@ describe('App component', () => {
   });
 
   test('renders loading first', () => {
-    auth.onAuthStateChanged.mockImplementation(() => {});
+    // Must return unsubscribe function to prevent "unsubscribe is not a function" error
+    auth.onAuthStateChanged.mockImplementation(() => jest.fn());
     render(<App />);
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
@@ -33,7 +34,7 @@ describe('App component', () => {
   test('renders login page if user is not logged in', async () => {
     auth.onAuthStateChanged.mockImplementation((callback) => {
       callback(null); // simulate not logged in
-      return jest.fn();
+      return jest.fn(); // unsubscribe function
     });
 
     render(<App />);
@@ -48,10 +49,9 @@ describe('App component', () => {
     const fakeUser = { uid: '123', email: 'test@test.com' };
     auth.onAuthStateChanged.mockImplementation((callback) => {
       callback(fakeUser); // simulate logged in
-      return jest.fn();
+      return jest.fn(); // unsubscribe function
     });
 
-    // Mock Firestore query for Home component
     const fakeTodos = [
       { id: '1', data: () => ({ task: 'Test Todo' }) },
       { id: '2', data: () => ({ task: 'Another Task' }) },
@@ -65,8 +65,8 @@ describe('App component', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/test todo/i)).toBeInTheDocument();
-      expect(screen.getByText(/another task/i)).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes('Test Todo'))).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes('Another Task'))).toBeInTheDocument();
     });
   });
 });
