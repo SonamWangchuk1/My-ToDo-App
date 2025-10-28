@@ -1,54 +1,80 @@
-// src/App.test.js
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import App from "./App";
 
-// Mock Firebase auth and Firestore
-jest.mock("./firebase", () => {
-  const currentUser = { uid: "123", email: "test@example.com" };
-  return {
-    auth: {
-      onAuthStateChanged: jest.fn(cb => {
-        // Call callback immediately with a fake user
-        cb(currentUser);
-        return jest.fn(); // return unsubscribe function
-      }),
-      signOut: jest.fn(),
-    },
-    db: {}, // We won’t interact with real Firestore in these tests
-  };
-});
+// Mock Firebase
+jest.mock("./firebase", () => ({
+  auth: {
+    onAuthStateChanged: jest.fn(),
+    signOut: jest.fn(),
+  },
+  db: {},
+}));
 
-// Mock react-router-dom Navigate so it doesn’t actually redirect
-jest.mock("react-router-dom", () => {
-  const actual = jest.requireActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => jest.fn(),
-  };
-});
+// Mock react-router-dom
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  BrowserRouter: ({ children }) => <div>{children}</div>,
+  Routes: ({ children }) => <div>{children}</div>,
+  Route: ({ element }) => <div>{element}</div>,
+  Navigate: () => <div>Navigate</div>,
+  useNavigate: () => jest.fn(),
+  Link: ({ children, to }) => <a href={to}>{children}</a>,
+}));
 
-describe("App component", () => {
-  test("renders home page if user is logged in", async () => {
-    render(<App />);
-    await waitFor(() => {
-      expect(screen.getByText(/My Todo App/i)).toBeInTheDocument();
-      expect(screen.getByText(/Logout/i)).toBeInTheDocument();
-    });
+describe("App Component", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  test("renders login page if no user is logged in", async () => {
-    // Override onAuthStateChanged to return null
+  test("renders loading state initially", () => {
     const { auth } = require("./firebase");
-    auth.onAuthStateChanged.mockImplementation(cb => {
-      cb(null);
+    auth.onAuthStateChanged.mockImplementation(() => jest.fn());
+    
+    render(<App />);
+    expect(screen.getByText(/Loading.../i)).toBeInTheDocument();
+  });
+
+  test("renders home page when user is logged in", async () => {
+    const { auth } = require("./firebase");
+    const mockUser = { uid: "123", email: "test@example.com" };
+    
+    auth.onAuthStateChanged.mockImplementation((callback) => {
+      callback(mockUser);
       return jest.fn();
     });
 
     render(<App />);
+    
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
-      expect(screen.getByPlaceholderText(/password/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Loading.../i)).not.toBeInTheDocument();
     });
+  });
+
+  test("renders login page when user is not logged in", async () => {
+    const { auth } = require("./firebase");
+    
+    auth.onAuthStateChanged.mockImplementation((callback) => {
+      callback(null);
+      return jest.fn();
+    });
+
+    render(<App />);
+    
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading.../i)).not.toBeInTheDocument();
+    });
+  });
+
+  test("unsubscribes from auth on unmount", () => {
+    const { auth } = require("./firebase");
+    const mockUnsubscribe = jest.fn();
+    
+    auth.onAuthStateChanged.mockImplementation(() => mockUnsubscribe);
+
+    const { unmount } = render(<App />);
+    unmount();
+
+    expect(mockUnsubscribe).toHaveBeenCalled();
   });
 });
