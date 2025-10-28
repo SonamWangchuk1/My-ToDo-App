@@ -11,11 +11,17 @@ function App() {
 
   // Listen for Firebase auth state changes
   useEffect(() => {
+    let isMounted = true; // avoid state updates if unmounted
     const unsubscribe = auth.onAuthStateChanged(currentUser => {
-      setUser(currentUser); // null if not logged in
-      setLoading(false);
+      if (isMounted) {
+        setUser(currentUser);
+        setLoading(false);
+      }
     });
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   if (loading) return <p style={{ textAlign: "center", marginTop: "50px" }}>Loading...</p>;
@@ -26,25 +32,25 @@ function App() {
         {/* Signup page: only accessible if user is NOT logged in */}
         <Route 
           path="/signup" 
-          element={user ? <Navigate to="/home" /> : <Signup />} 
+          element={user ? <Navigate to="/home" replace /> : <Signup />} 
         />
 
         {/* Login page: only accessible if user is NOT logged in */}
         <Route 
           path="/login" 
-          element={user ? <Navigate to="/home" /> : <Login />} 
+          element={user ? <Navigate to="/home" replace /> : <Login />} 
         />
 
         {/* Home page: only accessible if user IS logged in */}
         <Route 
           path="/home" 
-          element={user ? <Home /> : <Navigate to="/login" />} 
+          element={user ? <Home /> : <Navigate to="/login" replace />} 
         />
 
         {/* Default route */}
         <Route 
           path="/" 
-          element={<Navigate to="/login" />} 
+          element={<Navigate to="/login" replace />} 
         />
       </Routes>
     </Router>
