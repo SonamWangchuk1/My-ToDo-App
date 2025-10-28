@@ -1,24 +1,53 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import { auth } from "./firebase";
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser); // null if not logged in
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) return <p style={{ textAlign: "center", marginTop: "50px" }}>Loading...</p>;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        {/* Signup page: only accessible if user is NOT logged in */}
+        <Route 
+          path="/signup" 
+          element={user ? <Navigate to="/home" /> : <Signup />} 
+        />
+
+        {/* Login page: only accessible if user is NOT logged in */}
+        <Route 
+          path="/login" 
+          element={user ? <Navigate to="/home" /> : <Login />} 
+        />
+
+        {/* Home page: only accessible if user IS logged in */}
+        <Route 
+          path="/home" 
+          element={user ? <Home /> : <Navigate to="/login" />} 
+        />
+
+        {/* Default route */}
+        <Route 
+          path="/" 
+          element={<Navigate to="/login" />} 
+        />
+      </Routes>
+    </Router>
   );
 }
 
